@@ -105,9 +105,11 @@ describe('stale-while-revalidate', function () {
     });
 
     it('schedules background refresh via terminating callback', function () {
+        $initialTimestamp = Carbon::now()->getTimestamp();
         FlexibleCache::flexible('test-key', [5, 10], fn () => 'initial-value');
 
         Carbon::setTestNow(Carbon::now()->addSeconds(7));
+        $staleTimestamp = Carbon::now()->getTimestamp();
 
         $newCallCount = 0;
         FlexibleCache::flexible('test-key', [5, 10], function () use (&$newCallCount) {
@@ -123,6 +125,11 @@ describe('stale-while-revalidate', function () {
 
         expect($newCallCount)->toBe(1);
         expect(Cache::get('test-key'))->toBe('refreshed-value');
+
+        // Verify the created timestamp was also updated (critical for preventing infinite stale loops)
+        $newTimestamp = Cache::get('illuminate:cache:flexible:created:test-key');
+        expect($newTimestamp)->toBe($staleTimestamp);
+        expect($newTimestamp)->not->toBe($initialTimestamp);
     });
 
     it('prevents duplicate refresh scheduling', function () {
@@ -132,22 +139,35 @@ describe('stale-while-revalidate', function () {
 
         Carbon::setTestNow(Carbon::now()->addSeconds(7));
 
-        $callCount = 0;
-        $callback = function () use (&$callCount) {
-            $callCount++;
+        // Use DIFFERENT callbacks to verify only the first one runs
+        // This matches Laravel's defer() behavior where first callback wins
+        $callCount1 = 0;
+        $callCount2 = 0;
+        $callCount3 = 0;
 
-            return 'refreshed-value';
-        };
+        $instance->flexible('test-key', [5, 10], function () use (&$callCount1) {
+            $callCount1++;
 
-        // Call multiple times while stale
-        $instance->flexible('test-key', [5, 10], $callback);
-        $instance->flexible('test-key', [5, 10], $callback);
-        $instance->flexible('test-key', [5, 10], $callback);
+            return 'first-callback';
+        });
+        $instance->flexible('test-key', [5, 10], function () use (&$callCount2) {
+            $callCount2++;
+
+            return 'second-callback';
+        });
+        $instance->flexible('test-key', [5, 10], function () use (&$callCount3) {
+            $callCount3++;
+
+            return 'third-callback';
+        });
 
         app()->terminate();
 
-        // Should only refresh once
-        expect($callCount)->toBe(1);
+        // Only the first callback should have run
+        expect($callCount1)->toBe(1);
+        expect($callCount2)->toBe(0);
+        expect($callCount3)->toBe(0);
+        expect(Cache::get('test-key'))->toBe('first-callback');
     });
 });
 
@@ -288,10 +308,15 @@ describe('edge cases', function () {
     it('handles zero TTL values', function () {
         FlexibleCache::flexible('test-key', [0, 5], fn () => 'value');
 
-        // Should immediately be stale
+        // Should immediately be stale (fresh period is 0 seconds)
         $result = FlexibleCache::flexible('test-key', [0, 5], fn () => 'new-value');
 
+        // Returns stale value immediately
         expect($result)->toBe('value');
+
+        // But background refresh should still happen
+        app()->terminate();
+        expect(Cache::get('test-key'))->toBe('new-value');
     });
 
     it('handles negative TTL values as zero', function () {
