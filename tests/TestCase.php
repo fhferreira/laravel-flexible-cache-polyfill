@@ -1,37 +1,49 @@
 <?php
 
-namespace VendorName\Skeleton\Tests;
+namespace Spatie\FlexibleCache\Tests;
 
-use Illuminate\Database\Eloquent\Factories\Factory;
 use Orchestra\Testbench\TestCase as Orchestra;
-use VendorName\Skeleton\SkeletonServiceProvider;
+use Spatie\FlexibleCache\FlexibleCacheServiceProvider;
 
 class TestCase extends Orchestra
 {
-    protected function setUp(): void
-    {
-        parent::setUp();
-
-        Factory::guessFactoryNamesUsing(
-            fn (string $modelName) => 'VendorName\\Skeleton\\Database\\Factories\\'.class_basename($modelName).'Factory'
-        );
-    }
-
-    protected function getPackageProviders($app)
+    protected function getPackageProviders($app): array
     {
         return [
-            SkeletonServiceProvider::class,
+            FlexibleCacheServiceProvider::class,
         ];
     }
 
-    public function getEnvironmentSetUp($app)
+    protected function getEnvironmentSetUp($app): void
     {
-        config()->set('database.default', 'testing');
+        $app['config']->set('database.redis.client', 'predis');
 
-        /*
-         foreach (\Illuminate\Support\Facades\File::allFiles(__DIR__ . '/../database/migrations') as $migration) {
-            (include $migration->getRealPath())->up();
-         }
-         */
+        $app['config']->set('database.redis.default', [
+            'host' => env('REDIS_HOST', '127.0.0.1'),
+            'port' => env('REDIS_PORT', 6379),
+            'database' => 0,
+        ]);
+
+        // Secondary Redis connection for multi-store tests
+        $app['config']->set('database.redis.cache2', [
+            'host' => env('REDIS_HOST', '127.0.0.1'),
+            'port' => env('REDIS_PORT', 6379),
+            'database' => 1,
+        ]);
+
+        $app['config']->set('cache.default', 'redis');
+
+        $app['config']->set('cache.stores.redis', [
+            'driver' => 'redis',
+            'connection' => 'default',
+            'lock_connection' => 'default',
+        ]);
+
+        // Secondary Redis store for multi-store tests
+        $app['config']->set('cache.stores.redis2', [
+            'driver' => 'redis',
+            'connection' => 'cache2',
+            'lock_connection' => 'cache2',
+        ]);
     }
 }

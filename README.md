@@ -1,24 +1,17 @@
-# :package_description
+# Polyfill for Cache::flexible() in Laravel 10 and 11
 
-[![Latest Version on Packagist](https://img.shields.io/packagist/v/:vendor_slug/:package_slug.svg?style=flat-square)](https://packagist.org/packages/:vendor_slug/:package_slug)
-[![GitHub Tests Action Status](https://img.shields.io/github/actions/workflow/status/:vendor_slug/:package_slug/run-tests.yml?branch=main&label=tests&style=flat-square)](https://github.com/:vendor_slug/:package_slug/actions?query=workflow%3Arun-tests+branch%3Amain)
-[![GitHub Code Style Action Status](https://img.shields.io/github/actions/workflow/status/:vendor_slug/:package_slug/fix-php-code-style-issues.yml?branch=main&label=code%20style&style=flat-square)](https://github.com/:vendor_slug/:package_slug/actions?query=workflow%3A"Fix+PHP+code+style+issues"+branch%3Amain)
-[![Total Downloads](https://img.shields.io/packagist/dt/:vendor_slug/:package_slug.svg?style=flat-square)](https://packagist.org/packages/:vendor_slug/:package_slug)
-<!--delete-->
----
-This repo can be used to scaffold a Laravel package. Follow these steps to get started:
+[![Latest Version on Packagist](https://img.shields.io/packagist/v/spatie/laravel-flexible-cache-polyfill.svg?style=flat-square)](https://packagist.org/packages/spatie/laravel-flexible-cache-polyfill)
+[![GitHub Tests Action Status](https://img.shields.io/github/actions/workflow/status/spatie/laravel-flexible-cache-polyfill/run-tests.yml?branch=main&label=tests&style=flat-square)](https://github.com/spatie/laravel-flexible-cache-polyfill/actions?query=workflow%3Arun-tests+branch%3Amain)
+[![GitHub Code Style Action Status](https://img.shields.io/github/actions/workflow/status/spatie/laravel-flexible-cache-polyfill/fix-php-code-style-issues.yml?branch=main&label=code%20style&style=flat-square)](https://github.com/spatie/laravel-flexible-cache-polyfill/actions?query=workflow%3A"Fix+PHP+code+style+issues"+branch%3Amain)
+[![Total Downloads](https://img.shields.io/packagist/dt/spatie/laravel-flexible-cache-polyfill.svg?style=flat-square)](https://packagist.org/packages/spatie/laravel-flexible-cache-polyfill)
 
-1. Press the "Use this template" button at the top of this repo to create a new repo with the contents of this skeleton.
-2. Run "php ./configure.php" to run a script that will replace all placeholders throughout all the files.
-3. Have fun creating your package.
-4. If you need help creating a package, consider picking up our <a href="https://laravelpackage.training">Laravel Package Training</a> video course.
----
-<!--/delete-->
-This is where your description should go. Limit it to a paragraph or two. Consider adding a small example.
+This package provides a polyfill for the `Cache::flexible()` method, which was introduced in Laravel 11. It brings the [stale while revalidating](https://laravel.com/docs/master/cache#swr) cache pattern to Laravel 10.
+
+When using `Cache::remember`, some users may experience slow response times if the cached value has expired. The flexible method allows stale data to be served while the cached value is recalculated in the background after the response is sent, preventing slow response times for your users.
 
 ## Support us
 
-[<img src="https://github-ads.s3.eu-central-1.amazonaws.com/:package_name.jpg?t=1" width="419px" />](https://spatie.be/github-ad-click/:package_name)
+[<img src="https://github-ads.s3.eu-central-1.amazonaws.com/FlexibleCachePolyfill.jpg?t=1" width="419px" />](https://spatie.be/github-ad-click/FlexibleCachePolyfill)
 
 We invest a lot of resources into creating [best in class open source packages](https://spatie.be/open-source). You can support us by [buying one of our paid products](https://spatie.be/open-source/support-us).
 
@@ -29,40 +22,29 @@ We highly appreciate you sending us a postcard from your hometown, mentioning wh
 You can install the package via composer:
 
 ```bash
-composer require :vendor_slug/:package_slug
-```
-
-You can publish and run the migrations with:
-
-```bash
-php artisan vendor:publish --tag=":package_slug-migrations"
-php artisan migrate
-```
-
-You can publish the config file with:
-
-```bash
-php artisan vendor:publish --tag=":package_slug-config"
-```
-
-This is the contents of the published config file:
-
-```php
-return [
-];
-```
-
-Optionally, you can publish the views using
-
-```bash
-php artisan vendor:publish --tag=":package_slug-views"
+composer require spatie/laravel-flexible-cache-polyfill
 ```
 
 ## Usage
 
+Using the `Cache::flexible()` facade:
+
 ```php
-$variable = new VendorName\Skeleton();
-echo $variable->echoPhrase('Hello, VendorName!');
+$value = Cache::flexible('users', [5, 10], function () {
+    return DB::table('users')->get();
+});
+```
+
+The first value (5) is the number of seconds the cache is considered "fresh". The second value (10) defines how long it can be served as stale data before recalculation is necessary.
+
+- 0-5 seconds: Returns cached value immediately
+- 5-10 seconds: Returns stale value, refreshes in background after response is sent
+- After 10 seconds: Cache expired, recalculates immediately
+
+Support for all stores is available:
+
+```php
+$value = Cache::store('redis-2')->flexible(...);
 ```
 
 ## Testing
@@ -85,7 +67,7 @@ Please review [our security policy](../../security/policy) on how to report secu
 
 ## Credits
 
-- [:author_name](https://github.com/:author_username)
+- [Alex Vanderbist](https://github.com/alexvanderbist)
 - [All Contributors](../../contributors)
 
 ## License
