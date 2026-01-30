@@ -1,6 +1,6 @@
 {
     "name": "spatie/laravel-flexible-cache-polyfill",
-    "description": "Polyfill for Cache::flexible() in Laravel 10",
+    "description": "Polyfill for Cache::flexible() in Laravel 8+",
     "keywords": [
         "spatie",
         "laravel",
@@ -19,7 +19,7 @@
         }
     ],
     "require": {
-        "php": "^8.1",
+        "php": "^7.4",
         "illuminate/contracts": "^10.0",
         "illuminate/support": "^10.0"
     },
