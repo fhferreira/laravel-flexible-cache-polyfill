@@ -51,7 +51,7 @@ class FlexibleCache
      * @param  array{seconds?: int, owner?: string}|null  $lock  Optional lock configuration
      * @return TCacheValue
      */
-    public function flexible(string $key, array $ttl, callable $callback, ?array $lock = null): mixed
+    public function flexible(string $key, array $ttl, callable $callback, ?array $lock = null)
     {
         $cache = $this->cache();
         $createdKey = "illuminate:cache:flexible:created:{$key}";
