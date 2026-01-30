@@ -16,7 +16,7 @@ class FlexibleCacheServiceProvider extends ServiceProvider
     {
         Repository::macro(
             'flexible',
-            function (string $key, array $ttl, callable $callback, ?array $lock = null): mixed {
+            function (string $key, array $ttl, callable $callback, ?array $lock = null) {
                 /** @var Repository $this */
                 return app(FlexibleCache::class)
                     ->usingRepository($this)
