@@ -128,16 +128,20 @@ class FlexibleCache
         return $manager->store($this->store);
     }
 
-    protected function getSeconds(DateTimeInterface|DateInterval|int $ttl): int
+    /**
+     * @param DateTimeInterface|DateInterval|int $ttl
+     * @return int
+     */
+    protected function getSeconds($ttl): int
     {
         if ($ttl instanceof DateInterval) {
             $ttl = Carbon::now()->add($ttl);
         }
-
+    
         if ($ttl instanceof DateTimeInterface) {
             $ttl = (int) ceil(Carbon::now()->diffInMilliseconds($ttl, false) / 1000);
         }
-
+    
         return (int) max(0, $ttl);
     }
 }
